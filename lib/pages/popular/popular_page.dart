@@ -31,6 +31,7 @@ class _PopularPageState extends State<PopularPage>
   late NavigationBarState navigationBarState;
   final FocusNode _focusNode = FocusNode();
   final ScrollController scrollController = ScrollController();
+  final SearchController searchController = SearchController();
   final PopularController popularController = Modular.get<PopularController>();
 
   @override
@@ -126,6 +127,80 @@ class _PopularPageState extends State<PopularPage>
                 : null,
             backgroundColor: Colors.transparent,
             actions: [
+              SearchAnchor(
+                isFullScreen: MediaQuery.sizeOf(context).width <
+                    LayoutBreakpoint.compact['width']!,
+                shrinkWrap: true,
+                searchController: searchController,
+                viewOnSubmitted: (t) async {
+                  searchController.closeView(t);
+                  if (t != '') {
+                    await popularController
+                        .searchBangumi(popularController.searchKeyword);
+                    setState(() {});
+                  } else {
+                    popularController.setCurrentTag('');
+                    popularController.clearBangumiList();
+                  }
+                },
+                viewOnChanged: (t) {
+                  popularController.setSearchKeyword(t);
+                  debugPrint(popularController.searchKeyword);
+                },
+                builder: (BuildContext context, SearchController controller) {
+                  if (controller.text != '') {
+                    return SizedBox(
+                      width: 300,
+                      height: 50,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 5, left: 8, right: 8),
+                        child: SearchBar(
+                          controller: controller,
+                          padding: const WidgetStatePropertyAll<EdgeInsets>(
+                            EdgeInsets.symmetric(horizontal: 3),
+                          ),
+                          onTap: () {
+                            controller.openView();
+                          },
+                          onChanged: (_) {
+                            controller.openView();
+                          },
+                          leading: IconButton(
+                            icon: Icon(Icons.arrow_back_ios_new_rounded),
+                            onPressed: () {
+                              controller.clear();
+                              popularController.setCurrentTag('');
+                              popularController.clearBangumiList();
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      controller.openView();
+                    },
+                  );
+                },
+                suggestionsBuilder:
+                    (BuildContext context, SearchController controller) {
+                  return List<ListTile>.generate(5, (int index) {
+                    final String item = 'item $index';
+                    return ListTile(
+                      title: Text('eva'),
+                      onTap: () async {
+                        searchController.closeView('eva');
+                        await popularController
+                            .searchBangumi(searchController.value.text);
+                        setState(() {});
+                      },
+                    );
+                  });
+                },
+              ),
               IconButton(
                   onPressed: () async {
                     if (!showSearchBar) {
@@ -229,7 +304,8 @@ class _PopularPageState extends State<PopularPage>
                             );
                           }
                           return contentGrid(
-                              (popularController.currentTag == '' && popularController.searchKeyword == '')
+                              (popularController.currentTag == '' &&
+                                      searchController.value.text == '')
                                   ? popularController.trendList
                                   : popularController.bangumiList,
                               orientation);
